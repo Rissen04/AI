@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BTC AI予測（スマホ版）</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #121214;
+            color: #ffffff;
+            text-align: center;
+            padding: 20px;
+            margin: 0;
+        }
+        .container {
+            max-width: 400px;
+            margin: auto;
+            background: #1e1e24;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        h1 { color: #f7931a; font-size: 24px; }
+        .price-box { font-size: 28px; font-weight: bold; margin: 20px 0; color: #fff; }
+        .ai-signal {
+            font-size: 22px;
+            font-weight: bold;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 15px;
+            text-transform: uppercase;
+        }
+        .BUY { background-color: #2ec4b6; color: #fff; }
+        .SELL { background-color: #e71d36; color: #fff; }
+        .HOLD { background-color: #ff9f1c; color: #fff; }
+        .info { font-size: 12px; color: #a0a0a5; margin-top: 20px; }
+        button {
+            background-color: #f7931a;
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        button:hover { background-color: #e28112; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>BTC AI予測シグナル</h1>
+    <p>現在のビットコイン価格 (JPY)</p>
+    <div class="price-box" id="btc-price">読込中...</div>
+    
+    <hr style="border: 0.5px solid #333;">
+    
+    <p>AI予測のシグナル</p>
+    <div id="ai-signal" class="ai-signal HOLD">分析中...</div>
+    <p id="ai-reason" style="font-size: 14px; color: #ccc; margin-top: 10px;"></p>
+
+    <button onclick="fetchBitcoinData()">手動で再更新</button>
+    <div class="info">※CoinGeckoのリアルタイムパブリックデータを使用しています。</div>
+</div>
+
+<script>
+    async function fetchBitcoinData() {
+        document.getElementById('btc-price').innerText = "更新中...";
+        document.getElementById('ai-signal').innerText = "分析中...";
+        document.getElementById('ai-reason').innerText = "";
+
+        try {
+            // 現在の価格と過去の簡易データを取得
+            const response = await fetch('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=jpy&days=1');
+            const data = await response.json();
+            
+            const prices = data.prices;
+            const currentPrice = prices[prices.length - 1][1];
+            
+            // 価格の表示を整形
+            document.getElementById('btc-price').innerText = "¥" + Math.round(currentPrice).toLocaleString();
+
+            // 簡易AIロジック（移動平均の計算）
+            let sum = 0;
+            prices.forEach(p => sum += p[1]);
+            const averagePrice = sum / prices.length;
+
+            // 直近3データでの傾き（トレンド）
+            const shortTermPrice = prices[prices.length - 3][1];
+            
+            let signal = "HOLD";
+            let reason = "明確なトレンドが見られません。様子見を推奨します。";
+
+            // 判定ロジック
+            if (currentPrice > averagePrice && currentPrice > shortTermPrice * 1.005) {
+                signal = "BUY";
+                reason = "短期的な上昇トレンドが検出されました。買い圧力が強まっています。";
+            } else if (currentPrice < averagePrice && currentPrice < shortTermPrice * 0.995) {
+                signal = "SELL";
+                reason = "短期的な下落トレンドが検出されました。売り抜けを考慮してください。";
+            }
+
+            // 画面への反映
+            const signalDiv = document.getElementById('ai-signal');
+            signalDiv.innerText = signal;
+            signalDiv.className = "ai-signal " + signal;
+            document.getElementById('ai-reason').innerText = reason;
+
+        } catch (error) {
+            console.error(error);
+            document.getElementById('btc-price').innerText = "エラー";
+            document.getElementById('ai-signal').innerText = "停止";
+            document.getElementById('ai-reason').innerText = "データの取得に失敗しました。時間をおいて再度お試しください。";
+        }
+    }
+
+    // 起動時に自動実行
+    fetchBitcoinData();
+</script>
+
+</body>
+</html>
