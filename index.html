@@ -3,26 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BTC AI予測（自動更新版）</title>
+    <title>BTC 監視＆AI投資シミュレーター</title>
     <style>
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
             background-color: #121214;
             color: #ffffff;
-            text-align: center;
-            padding: 20px;
+            padding: 15px;
             margin: 0;
         }
         .container {
-            max-width: 400px;
+            max-width: 420px;
             margin: auto;
             background: #1e1e24;
-            padding: 25px;
+            padding: 20px;
             border-radius: 15px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
-        h1 { color: #f7931a; font-size: 24px; }
-        .price-box { font-size: 28px; font-weight: bold; margin: 20px 0; color: #fff; }
+        /* タブメニュー */
+        .tabs {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            background: #2a2a32;
+            border-radius: 8px;
+            padding: 5px;
+        }
+        .tab-btn {
+            background: none;
+            border: none;
+            color: #a0a0a5;
+            padding: 10px 15px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 50%;
+            border-radius: 6px;
+            transition: 0.3s;
+        }
+        .tab-btn.active {
+            background-color: #f7931a;
+            color: white;
+        }
+        .page { display: none; }
+        .page.active { display: block; }
+
+        /* 共通スタイル */
+        h1 { color: #f7931a; font-size: 22px; margin-top: 10px; text-align: center; }
+        .price-box { font-size: 28px; font-weight: bold; margin: 15px 0; color: #fff; text-align: center; }
+        
+        /* ページ1: 監視モニター */
         .ai-signal {
             font-size: 22px;
             font-weight: bold;
@@ -30,100 +60,236 @@
             border-radius: 8px;
             margin-top: 15px;
             text-transform: uppercase;
+            text-align: center;
         }
         .BUY { background-color: #2ec4b6; color: #fff; }
         .SELL { background-color: #e71d36; color: #fff; }
         .HOLD { background-color: #ff9f1c; color: #fff; }
-        .info { font-size: 12px; color: #a0a0a5; margin-top: 20px; }
-        .timer { font-size: 13px; color: #707075; margin-top: 10px; font-style: italic; }
-        button {
+        .timer { font-size: 13px; color: #707075; margin-top: 10px; font-style: italic; text-align: center; }
+        
+        /* ページ2: シミュレーター */
+        .input-group {
+            margin: 15px 0;
+            text-align: left;
+        }
+        label { display: block; font-size: 14px; color: #a0a0a5; margin-bottom: 5px; }
+        input {
+            width: 100%;
+            padding: 12px;
+            background: #2a2a32;
+            border: 1px solid #444;
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        .result-card {
+            background: #2a2a32;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            text-align: left;
+        }
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-size: 15px;
+        }
+        .bullish { color: #2ec4b6; font-weight: bold; }
+        .bearish { color: #e71d36; font-weight: bold; }
+        .neutral { color: #ff9f1c; font-weight: bold; }
+
+        /* ボタン */
+        .main-btn {
             background-color: #f7931a;
             border: none;
             color: white;
-            padding: 12px 24px;
+            padding: 12px;
+            width: 100%;
             font-size: 16px;
             border-radius: 8px;
             cursor: pointer;
-            margin-top: 15px;
+            margin-top: 10px;
             font-weight: bold;
         }
-        button:hover { background-color: #e28112; }
+        .main-btn:hover { background-color: #e28112; }
+        .info { font-size: 11px; color: #707075; margin-top: 15px; text-align: center; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>BTC AI予測シグナル</h1>
-    <p>現在のビットコイン価格 (JPY)</p>
-    <div class="price-box" id="btc-price">読込中...</div>
-    
-    <hr style="border: 0.5px solid #333;">
-    
-    <p>AI予測のシグナル</p>
-    <div id="ai-signal" class="ai-signal HOLD">分析中...</div>
-    <p id="ai-reason" style="font-size: 14px; color: #ccc; margin-top: 10px;"></p>
+    <!-- タブ切り替えボタン -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('monitor')">Liveモニター</button>
+        <button class="tab-btn" onclick="switchTab('simulator')">AI投資予想</button>
+    </div>
 
-    <button onclick="resetFetch()">今すぐ手動更新</button>
-    <div class="timer" id="timer-text">次の自動更新まで: --秒</div>
-    <div class="info">※30秒ごとに自動で価格とAI予測をアップデートします。</div>
+    <!-- ページ1: リアルタイムモニター -->
+    <div id="page-monitor" class="page active">
+        <h1>BTC AI予測シグナル</h1>
+        <p style="text-align:center; color:#a0a0a5; margin:0;">現在のビットコイン価格 (JPY)</p>
+        <div class="price-box class-btc-live">読込中...</div>
+        
+        <hr style="border: 0.5px solid #333;">
+        
+        <p style="text-align:center; margin-bottom:5px;">AI短期判定</p>
+        <div id="ai-signal" class="ai-signal HOLD">分析中...</div>
+        <p id="ai-reason" style="font-size: 14px; color: #ccc; margin-top: 10px; text-align:left;"></p>
+
+        <button class="main-btn" onclick="resetFetch()">今すぐ手動更新</button>
+        <div class="timer" id="timer-text">次の自動更新まで: --秒</div>
+    </div>
+
+    <!-- ページ2: 投資シミュレーター -->
+    <div id="page-simulator" class="page">
+        <h1>AI将来投資シミュレータ</h1>
+        <p style="text-align:center; color:#a0a0a5; margin:0;">現在のレートベースで算出</p>
+        <div class="price-box class-btc-live">読込中...</div>
+
+        <div class="input-group">
+            <label for="invest-amount">投資する金額 (日本円)</label>
+            <input type="number" id="invest-amount" value="10000" min="100" oninput="calculateSimulation()">
+        </div>
+
+        <div class="result-card">
+            <div style="font-weight:bold; color:#f7931a; margin-bottom:10px; border-bottom:1px solid #444; padding-bottom:5px;">
+                1年後のAI価格シミュレーション
+            </div>
+            
+            <div class="result-row">
+                <span>購入できるBTC量:</span>
+                <span id="res-btc-amount" style="font-family:monospace;">0.00000000 BTC</span>
+            </div>
+            
+            <div class="result-row" style="margin-top:15px;">
+                <span class="bullish">🚀 強気予測 (2倍超)</span>
+                <span id="res-bullish" class="bullish">¥0</span>
+            </div>
+            <div class="result-row">
+                <span class="neutral">📊 巡航予測 (+30%)</span>
+                <span id="res-neutral" class="neutral">¥0</span>
+            </div>
+            <div class="result-row">
+                <span class="bearish">📉 弱気予測 (-40%)</span>
+                <span id="res-bearish" class="bearish">¥0</span>
+            </div>
+        </div>
+        
+        <p id="simulation-advice" style="font-size:13px; color:#ccc; margin-top:15px; text-align:left; line-height:1.4;"></p>
+    </div>
+
+    <div class="info">※価格はCoinGeckoのデータをリアルタイム自動取得。<br>AI予測は過去データと市場サイクルに基づいたシミュレーションです。</div>
 </div>
 
 <script>
-    const INTERVAL_TIME = 30; // 自動更新の間隔（秒）
+    const INTERVAL_TIME = 30; 
     let countdown = INTERVAL_TIME;
     let timerInterval = null;
+    let currentBtcPrice = 0; // 最新価格を保持
 
+    // タブ切り替えロジック
+    function switchTab(tabName) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+
+        if(tabName === 'monitor') {
+            document.querySelectorAll('.tab-btn')[0].classList.add('active');
+            document.getElementById('page-monitor').classList.add('active');
+        } else {
+            document.querySelectorAll('.tab-btn')[1].classList.add('active');
+            document.getElementById('page-simulator').classList.add('active');
+            calculateSimulation(); // 切り替え時に計算を実行
+        }
+    }
+
+    // データ取得とAI判定
     async function fetchBitcoinData() {
-        document.getElementById('btc-price').innerText = "更新中...";
-        document.getElementById('ai-signal').innerText = "分析中...";
-        document.getElementById('ai-reason').innerText = "";
-
+        document.querySelectorAll('.class-btc-live').forEach(el => el.innerText = "更新中...");
+        
         try {
-            // 現在の価格と過去の簡易データを取得
             const response = await fetch('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=jpy&days=1');
             const data = await response.json();
             
             const prices = data.prices;
-            const currentPrice = prices[prices.length - 1][1];
+            currentBtcPrice = prices[prices.length - 1][1];
             
-            // 価格表示を更新
-            document.getElementById('btc-price').innerText = "¥" + Math.round(currentPrice).toLocaleString();
+            // 全ての価格表示箇所を更新
+            document.querySelectorAll('.class-btc-live').forEach(el => {
+                el.innerText = "¥" + Math.round(currentBtcPrice).toLocaleString();
+            });
 
-            // 簡易AIロジック（移動平均の計算）
+            // 監視用AIロジック
             let sum = 0;
             prices.forEach(p => sum += p[1]);
             const averagePrice = sum / prices.length;
-
-            // 直近3データでの傾き（トレンド）
             const shortTermPrice = prices[prices.length - 3][1];
             
             let signal = "HOLD";
             let reason = "明確なトレンドが見られません。様子見を推奨します。";
 
-            // 判定ロジック
-            if (currentPrice > averagePrice && currentPrice > shortTermPrice * 1.005) {
+            if (currentBtcPrice > averagePrice && currentBtcPrice > shortTermPrice * 1.005) {
                 signal = "BUY";
                 reason = "短期的な上昇トレンドが検出されました。買い圧力が強まっています。";
-            } else if (currentPrice < averagePrice && currentPrice < shortTermPrice * 0.995) {
+            } else if (currentBtcPrice < averagePrice && currentBtcPrice < shortTermPrice * 0.995) {
                 signal = "SELL";
                 reason = "短期的な下落トレンドが検出されました。売り抜けを考慮してください。";
             }
 
-            // 画面への反映
             const signalDiv = document.getElementById('ai-signal');
             signalDiv.innerText = signal;
             signalDiv.className = "ai-signal " + signal;
             document.getElementById('ai-reason').innerText = reason;
 
+            // シミュレーション計算もバックグラウンドで更新
+            calculateSimulation();
+
         } catch (error) {
             console.error(error);
-            document.getElementById('btc-price').innerText = "エラー";
-            document.getElementById('ai-signal').innerText = "停止";
-            document.getElementById('ai-reason').innerText = "データの取得に失敗しました。";
+            document.querySelectorAll('.class-btc-live').forEach(el => el.innerText = "エラー");
         }
     }
 
-    // タイマーの管理関数
+    // 将来予測シミュレーションの計算ロジック
+    function calculateSimulation() {
+        const inputAmount = parseFloat(document.getElementById('invest-amount').value);
+        
+        if (!inputAmount || inputAmount <= 0 || currentBtcPrice === 0) {
+            document.getElementById('res-btc-amount').innerText = "0.00000000 BTC";
+            document.getElementById('res-bullish').innerText = "¥0";
+            document.getElementById('res-neutral').innerText = "¥0";
+            document.getElementById('res-bearish').innerText = "¥0";
+            document.getElementById('simulation-advice').innerText = "投資金額を正しく入力してください。";
+            return;
+        }
+
+        // 1. 購入可能なBTC枚数を算出
+        const btcAmount = inputAmount / currentBtcPrice;
+        document.getElementById('res-btc-amount').innerText = btcAmount.toFixed(8) + " BTC";
+
+        // 2. AI予測シナリオ（倍率設定）
+        // 強気：歴史的サイクルから約2.2倍、巡航：インフレヘッジで+30%、弱気：規制や規制強化で-40%
+        const bullishPrice = currentBtcPrice * 2.25;
+        const neutralPrice = currentBtcPrice * 1.30;
+        const bearishPrice = currentBtcPrice * 0.60;
+
+        // 3. ユーザーの資産がどうなるかを計算
+        const bullishResult = btcAmount * bullishPrice;
+        const neutralResult = btcAmount * neutralPrice;
+        const bearishResult = btcAmount * bearishPrice;
+
+        // 4. 画面へ出力
+        document.getElementById('res-bullish').innerText = "¥" + Math.round(bullishResult).toLocaleString();
+        document.getElementById('res-neutral').innerText = "¥" + Math.round(neutralResult).toLocaleString();
+        document.getElementById('res-bearish').innerText = "¥" + Math.round(bearishResult).toLocaleString();
+
+        // 5. 金額に応じた動的アドバイス
+        let advice = `💡 <b>AIの分析アドバイス:</b><br>今 ¥${inputAmount.toLocaleString()} を投資すると、半減期後の長期サイクルに乗った場合、強気シナリオでは最大で <b>¥${Math.round(bullishResult).toLocaleString()}</b> 前後まで膨らむポテンシャルがあります。ただし、仮想通貨は最悪の場合4割以上の急落（弱気シナリオ）もあるため、一括で買うより「3〜4回に分けて時期をずらす」とリスクを抑えられます。`;
+        document.getElementById('simulation-advice').innerHTML = advice;
+    }
+
+    // タイマー管理
     function startTimer() {
         clearInterval(timerInterval);
         countdown = INTERVAL_TIME;
@@ -135,18 +301,17 @@
             
             if (countdown <= 0) {
                 fetchBitcoinData();
-                countdown = INTERVAL_TIME; // タイマーをリセット
+                countdown = INTERVAL_TIME;
             }
         }, 1000);
     }
 
-    // 手動更新ボタンが押された時の処理
     function resetFetch() {
         fetchBitcoinData();
-        startTimer(); // タイマーも最初からやり直し
+        startTimer();
     }
 
-    // アプリ起動時の初期化
+    // 起動
     fetchBitcoinData();
     startTimer();
 </script>
