@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BTC AI予測（スマホ版）</title>
+    <title>BTC AI予測（自動更新版）</title>
     <style>
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
@@ -35,6 +35,7 @@
         .SELL { background-color: #e71d36; color: #fff; }
         .HOLD { background-color: #ff9f1c; color: #fff; }
         .info { font-size: 12px; color: #a0a0a5; margin-top: 20px; }
+        .timer { font-size: 13px; color: #707075; margin-top: 10px; font-style: italic; }
         button {
             background-color: #f7931a;
             border: none;
@@ -62,11 +63,16 @@
     <div id="ai-signal" class="ai-signal HOLD">分析中...</div>
     <p id="ai-reason" style="font-size: 14px; color: #ccc; margin-top: 10px;"></p>
 
-    <button onclick="fetchBitcoinData()">手動で再更新</button>
-    <div class="info">※CoinGeckoのリアルタイムパブリックデータを使用しています。</div>
+    <button onclick="resetFetch()">今すぐ手動更新</button>
+    <div class="timer" id="timer-text">次の自動更新まで: --秒</div>
+    <div class="info">※30秒ごとに自動で価格とAI予測をアップデートします。</div>
 </div>
 
 <script>
+    const INTERVAL_TIME = 30; // 自動更新の間隔（秒）
+    let countdown = INTERVAL_TIME;
+    let timerInterval = null;
+
     async function fetchBitcoinData() {
         document.getElementById('btc-price').innerText = "更新中...";
         document.getElementById('ai-signal').innerText = "分析中...";
@@ -80,7 +86,7 @@
             const prices = data.prices;
             const currentPrice = prices[prices.length - 1][1];
             
-            // 価格の表示を整形
+            // 価格表示を更新
             document.getElementById('btc-price').innerText = "¥" + Math.round(currentPrice).toLocaleString();
 
             // 簡易AIロジック（移動平均の計算）
@@ -113,12 +119,36 @@
             console.error(error);
             document.getElementById('btc-price').innerText = "エラー";
             document.getElementById('ai-signal').innerText = "停止";
-            document.getElementById('ai-reason').innerText = "データの取得に失敗しました。時間をおいて再度お試しください。";
+            document.getElementById('ai-reason').innerText = "データの取得に失敗しました。";
         }
     }
 
-    // 起動時に自動実行
+    // タイマーの管理関数
+    function startTimer() {
+        clearInterval(timerInterval);
+        countdown = INTERVAL_TIME;
+        document.getElementById('timer-text').innerText = "次の自動更新まで: " + countdown + "秒";
+
+        timerInterval = setInterval(() => {
+            countdown--;
+            document.getElementById('timer-text').innerText = "次の自動更新まで: " + countdown + "秒";
+            
+            if (countdown <= 0) {
+                fetchBitcoinData();
+                countdown = INTERVAL_TIME; // タイマーをリセット
+            }
+        }, 1000);
+    }
+
+    // 手動更新ボタンが押された時の処理
+    function resetFetch() {
+        fetchBitcoinData();
+        startTimer(); // タイマーも最初からやり直し
+    }
+
+    // アプリ起動時の初期化
     fetchBitcoinData();
+    startTimer();
 </script>
 
 </body>
